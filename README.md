@@ -3,7 +3,7 @@
 [![Model Context Protocol](https://img.shields.io/badge/MCP-Standard%20v1.0-blue?style=flat-square)](https://modelcontextprotocol.io/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8%2B-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D20.0.0-339933?style=flat-square&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
-[![Security](https://img.shields.io/badge/Antivirus-Defender%20Protected-brightgreen?style=flat-square)](https://github.com/)
+[![Security](https://img.shields.io/badge/Antivirus-Defender%20Protected-brightgreen?style=flat-square)](https://github.com/yusuf-polat/mail-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 
 An enterprise-ready, autonomous **Model Context Protocol (MCP)** server that connects Large Language Model (LLM) agents—including **Antigravity IDE**, **Claude Desktop**, and other MCP-compliant clients—to email accounts via standard **IMAP** and **SMTP** protocols.
@@ -100,7 +100,7 @@ Equipped with autonomous mailbox triage, thread-aware smart drafting, RFC 5545 c
 
 ### 2. Installation
 ```bash
-git clone https://github.com/your-username/mail-mcp.git
+git clone https://github.com/yusuf-polat/mail-mcp.git
 cd mail-mcp
 npm install
 ```
