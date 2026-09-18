@@ -32,12 +32,7 @@ export function registerMailAnalyzeTools(server: McpServer) {
 
         if (uid !== undefined) {
           const fetched = await imapService.readEmail(uid, folder || "INBOX", false);
-          emailToAnalyze = {
-            subject: fetched.subject,
-            text: fetched.text,
-            from: fetched.from,
-            attachments: fetched.attachments,
-          };
+          emailToAnalyze = fetched;
         } else if (subject !== undefined || bodyText !== undefined) {
           emailToAnalyze = {
             subject: subject || "",

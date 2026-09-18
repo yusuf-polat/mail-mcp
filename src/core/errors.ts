@@ -36,3 +36,14 @@ export class VirusThreatDetectedError extends MailMcpError {
     this.name = "VirusThreatDetectedError";
   }
 }
+
+export class DataExfiltrationBlockedError extends MailMcpError {
+  constructor(reason: string, details?: unknown) {
+    super(
+      `[DLP / GÜVENLİK ENGELİ] Hassas veri sızdırma girişimi tespit edildi ve e-posta gönderimi durduruldu! Detay: ${reason}`,
+      "DATA_EXFILTRATION_BLOCKED",
+      details
+    );
+    this.name = "DataExfiltrationBlockedError";
+  }
+}

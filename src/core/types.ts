@@ -27,12 +27,38 @@ export interface EmailHeaderSummary {
   size?: number;
 }
 
+export type SecurityThreatType =
+  | "LABEL_HIJACKING"
+  | "CSS_DATA_EXFILTRATION"
+  | "REMOTE_TRACKING_OR_IP_LEAK"
+  | "HIDDEN_CSS_STEGANOGRAPHY"
+  | "INDIRECT_PROMPT_INJECTION"
+  | "MALICIOUS_TAG_OR_SCRIPT";
+
+export interface SecurityThreatItem {
+  type: SecurityThreatType;
+  severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+  description: string;
+  snippet?: string;
+}
+
+export interface EmailSecurityReport {
+  isSafe: boolean;
+  threatLevel: "SAFE" | "SUSPICIOUS" | "DANGEROUS";
+  threats: SecurityThreatItem[];
+  hiddenTextsDetected: string[];
+  sanitized: boolean;
+  recommendations: string[];
+}
+
 export interface EmailDetail extends EmailHeaderSummary {
   replyTo?: EmailAddress[];
   inReplyTo?: string;
   references?: string | string[];
   text?: string;
   html?: string;
+  sanitizedHtml?: string;
+  securityReport?: EmailSecurityReport;
   attachments: EmailAttachment[];
   headers?: Record<string, string | string[]>;
 }
@@ -109,6 +135,8 @@ export interface EmailAnalysisResult {
   };
   summary: string;
   potentialPhishingOrSpamRisk: boolean;
+  promptInjectionDetected?: boolean;
+  securityReport?: EmailSecurityReport;
   riskWarnings: string[];
 }
 

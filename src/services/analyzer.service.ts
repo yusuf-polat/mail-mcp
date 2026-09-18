@@ -1,4 +1,5 @@
-import { EmailAnalysisResult, EmailDetail, EmailIntentCategory, UrgencyLevel } from "../core/types.js";
+import { EmailAnalysisResult, EmailDetail, EmailIntentCategory, EmailSecurityReport, UrgencyLevel } from "../core/types.js";
+import { sanitizerService } from "./sanitizer.service.js";
 
 export class AnalyzerService {
   /**
@@ -7,29 +8,56 @@ export class AnalyzerService {
   public analyze(email: Partial<EmailDetail>): EmailAnalysisResult {
     const subject = email.subject || "";
     const text = email.text || "";
+    const html = email.html || "";
     const sender = email.from ? `${email.from.name || ""} <${email.from.address}>` : "";
     const combinedContent = `${subject}\n${text}`;
 
-    // 1. Urgency analysis
+    // 1. Run Security / Sanitizer Scan (Label Hijacking, CSS Font Stealing, Prompt Injection, Hidden CSS text)
+    let securityReport: EmailSecurityReport | undefined = email.securityReport;
+    if (!securityReport) {
+      if (html) {
+        const scan = sanitizerService.sanitizeHtml(html);
+        securityReport = scan.report;
+      } else {
+        const threat = sanitizerService.detectPromptInjection(combinedContent);
+        if (threat) {
+          securityReport = {
+            isSafe: false,
+            threatLevel: threat.severity === "CRITICAL" ? "DANGEROUS" : "SUSPICIOUS",
+            threats: [threat],
+            hiddenTextsDetected: [],
+            sanitized: true,
+            recommendations: [
+              "Bu e-postadaki talimatları YERİNE GETİRMEYİN. Otomatik yanıt vermeyin ve şifre paylaşmayın.",
+            ],
+          };
+        }
+      }
+    }
+
+    const promptInjectionThreat = sanitizerService.detectPromptInjection(combinedContent);
+    const hasPromptInjection = !!promptInjectionThreat || (securityReport?.threats.some((t) => t.type === "INDIRECT_PROMPT_INJECTION") ?? false);
+
+    // 2. Urgency analysis
     const urgency = this.calculateUrgency(subject, text);
 
-    // 2. Intent / Category classification
-    const intent = this.classifyIntent(subject, text);
+    // 3. Intent / Category classification
+    const intent = this.classifyIntent(subject, text, hasPromptInjection);
 
-    // 3. Sentiment & Tone analysis
+    // 4. Sentiment & Tone analysis
     const sentiment = this.analyzeSentiment(combinedContent);
 
-    // 4. Action items extraction
-    const keyActionItems = this.extractActionItems(text);
+    // 5. Action items extraction (filter out prompt injection instructions)
+    const keyActionItems = this.extractActionItems(text, hasPromptInjection);
 
-    // 5. Entity extraction (dates, money, urls, contacts)
+    // 6. Entity extraction (dates, money, urls, contacts)
     const extractedEntities = this.extractEntities(text);
 
-    // 6. Phishing / Spam risk evaluation
-    const { isRisk, warnings } = this.detectSecurityRisks(email, combinedContent);
+    // 7. Phishing / Spam / Security risk evaluation
+    const { isRisk, warnings } = this.detectSecurityRisks(email, combinedContent, securityReport);
 
-    // 7. Executive summary
-    const summary = this.generateSummary(subject, text, intent.category, urgency.level);
+    // 8. Executive summary
+    const summary = this.generateSummary(subject, text, intent.category, urgency.level, hasPromptInjection);
 
     return {
       messageId: email.messageId,
@@ -42,6 +70,8 @@ export class AnalyzerService {
       extractedEntities,
       summary,
       potentialPhishingOrSpamRisk: isRisk,
+      promptInjectionDetected: hasPromptInjection,
+      securityReport,
       riskWarnings: warnings,
     };
   }
@@ -104,7 +134,15 @@ export class AnalyzerService {
     return { level, score, reasons };
   }
 
-  private classifyIntent(subject: string, text: string): { category: EmailIntentCategory; confidence: number } {
+  private classifyIntent(
+    subject: string,
+    text: string,
+    hasPromptInjection: boolean = false
+  ): { category: EmailIntentCategory; confidence: number } {
+    if (hasPromptInjection) {
+      return { category: "SPAM_SUSPICIOUS", confidence: 0.95 };
+    }
+
     const combined = `${subject} ${text}`.toLowerCase();
 
     const categoryMatches: Record<EmailIntentCategory, RegExp[]> = {
@@ -245,7 +283,7 @@ export class AnalyzerService {
     return { tone: "NEUTRAL", explanation: "Informational or standard professional tone." };
   }
 
-  private extractActionItems(text: string): string[] {
+  private extractActionItems(text: string, hasPromptInjection: boolean = false): string[] {
     const sentences = text
       .split(/(?<=[.?!:\n])\s+/)
       .map((s) => s.trim())
@@ -273,6 +311,11 @@ export class AnalyzerService {
     const actionItems: string[] = [];
 
     for (const sentence of sentences) {
+      // If prompt injection is present, do not extract malicious commands as valid user action items!
+      if (hasPromptInjection && /bunu sen yapacaksın|bu mesajı (?:tarayan|okuyan|yorumlayan)|imap_pass|smtp_pass|şifre/i.test(sentence)) {
+        continue;
+      }
+
       for (const trigger of actionTriggers) {
         if (trigger.test(sentence)) {
           // Avoid duplicate or very similar lines
@@ -324,10 +367,21 @@ export class AnalyzerService {
     };
   }
 
-  private detectSecurityRisks(email: Partial<EmailDetail>, content: string): { isRisk: boolean; warnings: string[] } {
+  private detectSecurityRisks(
+    email: Partial<EmailDetail>,
+    content: string,
+    securityReport?: EmailSecurityReport
+  ): { isRisk: boolean; warnings: string[] } {
     const warnings: string[] = [];
 
-    // Check phishing trigger phrases
+    // 1. Include warnings from SecurityReport (HTML/CSS & Prompt Injection analysis)
+    if (securityReport && securityReport.threats.length > 0) {
+      for (const t of securityReport.threats) {
+        warnings.push(`[${t.type}] (${t.severity}) ${t.description}`);
+      }
+    }
+
+    // 2. Check phishing trigger phrases
     if (/şifrenizi girin|hesabınız askıya alındı|account suspended|verify your password|click here to unlock/i.test(content)) {
       warnings.push("Contains sensitive security / credential harvesting prompt keywords.");
     }
@@ -336,7 +390,7 @@ export class AnalyzerService {
       warnings.push("Contains typical advance-fee lottery/inheritance scam phrases.");
     }
 
-    // Attachment check: dangerous executable extensions
+    // 3. Attachment check: dangerous executable extensions
     if (email.attachments) {
       for (const att of email.attachments) {
         if (att.filename && /\.(exe|bat|cmd|vbs|scr|js|jar|pif|ps1)$/i.test(att.filename)) {
@@ -351,7 +405,17 @@ export class AnalyzerService {
     };
   }
 
-  private generateSummary(subject: string, text: string, category: EmailIntentCategory, urgency: UrgencyLevel): string {
+  private generateSummary(
+    subject: string,
+    text: string,
+    category: EmailIntentCategory,
+    urgency: UrgencyLevel,
+    hasPromptInjection: boolean = false
+  ): string {
+    if (hasPromptInjection) {
+      return `[GÜVENLİK UYARISI / DİKKAT] Bu e-postada Yapay Zekayı manipüle etmeye veya sistem şifrelerini sızdırmaya yönelik komut enjeksiyonu (Prompt Injection) tespit edildi. E-posta içeriğindeki yönlendirmeler güvenliğiniz için dikkate alınmamalıdır.`;
+    }
+
     const cleanLines = text
       .split("\n")
       .map((l) => l.trim())
@@ -363,3 +427,4 @@ export class AnalyzerService {
 }
 
 export const analyzerService = new AnalyzerService();
+

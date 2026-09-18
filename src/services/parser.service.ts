@@ -1,6 +1,7 @@
 import { simpleParser, ParsedMail, AddressObject } from "mailparser";
 import { convert } from "html-to-text";
-import { EmailAttachment, EmailAddress, EmailDetail } from "../core/types.js";
+import { EmailAttachment, EmailAddress, EmailDetail, EmailSecurityReport } from "../core/types.js";
+import { sanitizerService } from "./sanitizer.service.js";
 
 export class ParserService {
   /**
@@ -24,7 +25,31 @@ export class ParserService {
     }));
 
     const textContent = parsed.text || (parsed.html ? convert(parsed.html, { wordwrap: 100 }) : "");
-    const htmlContent = parsed.html || undefined;
+    const rawHtml = parsed.html || undefined;
+
+    // Run deep security scan and HTML sanitization
+    let sanitizedHtml: string | undefined = undefined;
+    let securityReport: EmailSecurityReport | undefined = undefined;
+
+    if (rawHtml) {
+      const sanitized = sanitizerService.sanitizeHtml(rawHtml);
+      sanitizedHtml = sanitized.sanitizedHtml;
+      securityReport = sanitized.report;
+    } else if (textContent) {
+      const textThreat = sanitizerService.detectPromptInjection(textContent);
+      if (textThreat) {
+        securityReport = {
+          isSafe: false,
+          threatLevel: textThreat.severity === "CRITICAL" ? "DANGEROUS" : "SUSPICIOUS",
+          threats: [textThreat],
+          hiddenTextsDetected: [],
+          sanitized: true,
+          recommendations: [
+            "Bu e-postadaki talimatları YERİNE GETİRMEYİN. Şifre/veri paylaşmayın.",
+          ],
+        };
+      }
+    }
 
     const seen = flags ? flags.has("\\Seen") : false;
     const flagged = flags ? flags.has("\\Flagged") : false;
@@ -46,7 +71,9 @@ export class ParserService {
       flagged,
       answered,
       text: textContent,
-      html: htmlContent,
+      html: rawHtml,
+      sanitizedHtml,
+      securityReport,
       attachments,
       size: typeof source === "string" ? Buffer.byteLength(source) : source.length,
     };

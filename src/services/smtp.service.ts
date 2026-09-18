@@ -1,8 +1,9 @@
 import nodemailer, { Transporter } from "nodemailer";
 import { getEnv } from "../config/env.js";
-import { SmtpDeliveryError } from "../core/errors.js";
+import { DataExfiltrationBlockedError, SmtpDeliveryError } from "../core/errors.js";
 import { ReplyEmailOptions, SendEmailOptions } from "../core/types.js";
 import { imapService } from "./imap.service.js";
+import { sanitizerService } from "./sanitizer.service.js";
 
 export class SmtpService {
   private transporter: Transporter | null = null;
@@ -50,6 +51,15 @@ export class SmtpService {
     accepted: string[];
     rejected: string[];
   }> {
+    // DLP Check: Prevent Prompt Injection from leaking environment variables or secrets
+    const outgoingContent = `${options.subject}\n${options.bodyText}\n${options.bodyHtml || ""}`;
+    const dlpResult = sanitizerService.scanOutboundForSecrets(outgoingContent);
+    if (dlpResult.isExfiltration) {
+      throw new DataExfiltrationBlockedError(
+        `Giden e-posta gövdesinde veya konusunda hassas çevre değişkeni/şifre (${dlpResult.matchedSecretName}) tespit edildi! Güvenlik nedeniyle gönderim engellendi.`
+      );
+    }
+
     const env = getEnv();
     const transporter = this.getTransporter();
 

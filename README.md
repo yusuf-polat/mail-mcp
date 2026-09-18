@@ -14,7 +14,10 @@ Equipped with autonomous mailbox triage, thread-aware smart drafting, RFC 5545 c
 
 ## 🌟 Key Capabilities
 
-### 🛡️ Zero-Trust Security & Antivirus Protection
+### 🛡️ Zero-Trust Security, Sanitization & Antivirus Protection
+* **HTML/CSS Zero-Day & PortSwigger Exploit Neutralization:** Automatically detects and strips dangerous CSS font exfiltration (`@font-face`, `unicode-range`, `descent-override`), Label Hijacking (`<label for="...">` attacking webmail UI buttons), and remote IP tracking (`image-set()`, `@import`, remote stylesheets).
+* **AI Prompt Injection & Steganography Shield:** Detects stealth text hidden via CSS (`opacity: 0`, `font-size: 0`, `display: none`, `::before`/`::after` pseudo-elements) intended to deceive AI readers, and blocks indirect prompt injection payloads attempting to compromise credentials.
+* **Outbound Data Loss Prevention (DLP):** Monitors all outgoing messages (`send_email`, `reply_email`) to guarantee environment secrets (e.g. `IMAP_PASS`, `SMTP_PASS`, API tokens) can never be exfiltrated via email.
 * **Mandatory Antivirus Scanning:** Every file attachment requested for download is first isolated in a secure quarantine staging area (`.quarantine/`) and scanned by **Microsoft Defender Antivirus (`MpCmdRun.exe`)** and heuristic engines.
 * **Malware & Double Extension Defense:** Detects executable tricks (`.pdf.exe`, `.docx.scr`), script blocks, and standard malware signatures.
 * **Instant Destruction on Threat:** Any flagged attachment is immediately expunged from storage and blocked with a `VirusThreatDetectedError`. Safe files are verified with SHA-256 hashes.
