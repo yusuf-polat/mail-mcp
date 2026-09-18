@@ -91,6 +91,7 @@ Equipped with autonomous mailbox triage, thread-aware smart drafting, RFC 5545 c
 | `extract_calendar_event`| Calendar | Converts meeting text/dates/links into standard `.ics` format. |
 | `find_unsubscribe_links`| Unsubscribe | Identifies `List-Unsubscribe` headers and opt-out links. |
 | `watch_new_emails` | Monitoring | Holds an IMAP IDLE connection to wait for incoming mail. |
+| `check_for_updates`| Management | Checks and syncs with latest GitHub master security patches and releases. |
 
 ---
 

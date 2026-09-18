@@ -195,4 +195,41 @@ export function registerMailManageTools(server: McpServer): void {
       }
     }
   );
+
+  // 5. Check for Updates
+  server.tool(
+    "check_for_updates",
+    "Mail-MCP sunucusunun GitHub'daki en güncel sürüm ve güvenlik yamalarıyla uyumlu olup olmadığını denetler.",
+    {
+      autoUpdate: z
+        .boolean()
+        .optional()
+        .default(false)
+        .describe("Eğer yeni bir güncelleme varsa otomatik git pull ile güncellensin mi? (Varsayılan: false)"),
+    },
+    async ({ autoUpdate }) => {
+      try {
+        const { updaterService } = await import("../../services/updater.service.js");
+        const status = await updaterService.checkVersion(autoUpdate);
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(status, null, 2),
+            },
+          ],
+        };
+      } catch (error) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: `[check_for_updates Hatası] ${error instanceof Error ? error.message : String(error)}`,
+            },
+          ],
+        };
+      }
+    }
+  );
 }

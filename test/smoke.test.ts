@@ -163,6 +163,16 @@ async function runTests() {
   }
   console.log("✓ McpServer ve tüm araçlar başarıyla yüklendi.");
 
+  // 9. GitHub Sürüm Uyumluluk ve Senkronizasyon Testi
+  console.log("\n[Test 9] UpdaterService GitHub Sürüm Kontrolü...");
+  const { updaterService } = await import("../src/services/updater.service.js");
+  const versionStatus = await updaterService.checkVersion(false);
+  console.log("GitHub Sürüm Durumu:", versionStatus);
+  if (!versionStatus.currentVersion) {
+    throw new Error("Yerel sürüm tespit edilemedi!");
+  }
+  console.log("✓ GitHub Sürüm Kontrolü başarıyla doğrulandı:", versionStatus.message);
+
   console.log("\n=== TÜM GÜVENLİK VE ENTEGRASYON TESTLERİ BAŞARIYLA GEÇTİ ===");
 }
 
@@ -170,3 +180,4 @@ runTests().catch((err) => {
   console.error("Test Hatası:", err);
   process.exit(1);
 });
+
