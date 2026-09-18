@@ -1,0 +1,49 @@
+{
+  "name": "mail-mcp-server",
+  "version": "1.0.0",
+  "description": "Professional Model Context Protocol (MCP) server for email management, real-time monitoring, parsing, replying, and content analysis.",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "mail-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "email",
+    "imap",
+    "smtp",
+    "ai",
+    "claude",
+    "mailparser"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.6.1",
+    "dotenv": "^16.4.7",
+    "html-to-text": "^9.0.5",
+    "imapflow": "^1.0.171",
+    "mailparser": "^3.7.2",
+    "nodemailer": "^6.10.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/html-to-text": "^9.0.4",
+    "@types/imapflow": "^1.0.21",
+    "@types/mailparser": "^3.4.5",
+    "@types/node": "^22.13.9",
+    "@types/nodemailer": "^6.4.17",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
